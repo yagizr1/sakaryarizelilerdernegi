@@ -1,0 +1,95 @@
+# Tüm stack: PostgreSQL + backend API + web (Nginx / PWA)
+#
+# Kurulum:
+#   copy .env.docker.example .env.docker
+#   docker compose --env-file .env.docker up --build -d
+#
+# Erişim:
+#   Panel (PWA): http://localhost:8180/
+#   API:         http://localhost:4100/api/health
+#
+# Giriş seçimi: http://localhost:8180/login
+# Yönetici: admin / admin
+# Demo üye TC: 10000000146 / uye12345
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: dernek-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-dernek}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - dernek_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-dernek}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - dernek
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: dernek-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4100
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-dernek}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-dernek-change-me-secret-min-32-chars}
+      CLIENT_ORIGIN: ${CLIENT_ORIGIN:-http://localhost:8180}
+      MAIL_ENABLED: ${MAIL_ENABLED:-false}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Dernek Yönetim}
+      MAIL_FROM: ${MAIL_FROM:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_SECURE: ${SMTP_SECURE:-true}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMS_ENABLED: ${SMS_ENABLED:-false}
+      SMS_PROVIDER: ${SMS_PROVIDER:-mock}
+      NETGSM_USERCODE: ${NETGSM_USERCODE:-}
+      NETGSM_PASSWORD: ${NETGSM_PASSWORD:-}
+      NETGSM_HEADER: ${NETGSM_HEADER:-}
+    ports:
+      - "${BACKEND_PORT:-4100}:4100"
+    volumes:
+      - dernek_uploads:/app/uploads
+    networks:
+      - dernek
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: dernek-web
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${WEB_PORT:-8180}:80"
+    networks:
+      - dernek
+
+volumes:
+  dernek_postgres_data:
+  dernek_uploads:
+
+networks:
+  dernek:
+    driver: bridge

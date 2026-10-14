@@ -1,0 +1,187 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("ADMIN") // ADMIN
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Member {
+  id           String   @id @default(cuid())
+  firstName    String
+  lastName     String
+  phone        String   @default("")
+  email        String   @default("")
+  district     String   @default("")
+  address      String   @default("")
+  profession   String   @default("")
+  bloodType    String   @default("")
+  nationalId   String   @default("")
+  birthDate    String   @default("")
+  joinDate     String   @default("")
+  status       String   @default("aktif") // aktif | pasif
+  duty         String   @default("uye")
+  debt         Float    @default(0)
+  notes        String   @default("")
+  passwordHash String   @default("")
+  memberNo     String   @default("")
+  photoUrl     String   @default("")
+  notifyEmail  Boolean  @default(true)
+  notifySms    Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  dues         Due[]
+  attendances  EventAttendance[]
+
+  @@index([nationalId])
+  @@index([status])
+}
+
+/// Onaylanmamış üye başvuruları — Member tablosuna yalnızca onayda yazılır
+model MemberApplication {
+  id           String   @id @default(cuid())
+  firstName    String
+  lastName     String
+  phone        String   @default("")
+  email        String   @default("")
+  address      String   @default("")
+  profession   String   @default("")
+  nationalId   String
+  birthDate    String   @default("")
+  passwordHash String
+  status       String   @default("beklemede") // beklemede | reddedildi
+  rejectReason String   @default("")
+  appliedAt    DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([nationalId])
+  @@index([status])
+}
+
+model Due {
+  id           String        @id @default(cuid())
+  memberId     String
+  member       Member        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  amount       Float
+  dueDate      String        @default("")
+  status       String        @default("bekliyor")
+  receipt      String        @default("")
+  note         String        @default("")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  financeEntry FinanceEntry?
+}
+
+model Event {
+  id           String            @id @default(cuid())
+  title        String
+  date         String            @default("")
+  time         String            @default("")
+  location     String            @default("")
+  attendees    Int               @default(0)
+  status       String            @default("yaklasan")
+  description  String            @default("")
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  attendances  EventAttendance[]
+}
+
+model EventAttendance {
+  id        String   @id @default(cuid())
+  eventId   String
+  memberId  String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([eventId, memberId])
+}
+
+model Announcement {
+  id          String   @id @default(cuid())
+  title       String
+  description String   @default("")
+  publishDate String   @default("")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model FinanceEntry {
+  id          String   @id @default(cuid())
+  date        String   @default("")
+  description String
+  category    String   @default("")
+  type        String
+  amount      Float
+  dueId       String?  @unique
+  due         Due?     @relation(fields: [dueId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Document {
+  id         String   @id @default(cuid())
+  name       String
+  type       String   @default("pdf")
+  size       String   @default("")
+  date       String   @default("")
+  storageKey String   @default("")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model AssemblyAttendee {
+  id         String   @id @default(cuid())
+  orderNo    Int      @default(0)
+  fullName   String
+  nationalId String   @default("")
+  signed     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Setting {
+  id               String   @id @default("main")
+  name             String   @default("")
+  shortName        String   @default("")
+  founded          String   @default("")
+  taxNo            String   @default("")
+  address          String   @default("")
+  phone            String   @default("")
+  email            String   @default("")
+  website          String   @default("")
+  assemblyDate     String   @default("")
+  assemblyTime     String   @default("")
+  assemblyPlace    String   @default("")
+  assemblyAgenda   String   @default("")
+  monthlyDueAmount Float    @default(0)
+  monthlyDueFixed  Boolean  @default(false)
+  updatedAt        DateTime @updatedAt
+}
+
+model MessageLog {
+  id         String   @id @default(cuid())
+  channel    String
+  type       String   @default("custom")
+  memberId   String   @default("")
+  memberName String   @default("")
+  to         String
+  subject    String   @default("")
+  body       String
+  status     String   @default("pending")
+  error      String   @default("")
+  externalId String   @default("")
+  createdAt  DateTime @default(now())
+}

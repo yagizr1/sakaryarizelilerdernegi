@@ -1,0 +1,11 @@
+node_modules
+dist
+.env
+*.db
+*.db-journal
+.dev.db
+prisma/dev.db
+.agents
+.claude
+.windsurf
+skills-lock.json

@@ -1,0 +1,16 @@
+{
+  "name": "dernek-uye-program",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"npm run dev:api\" \"npm run dev:web\"",
+    "dev:web": "npm run dev --prefix web",
+    "dev:api": "npm run dev --prefix backend",
+    "setup": "npm install --prefix backend && npm install --prefix web && npm run db:setup --prefix backend",
+    "docker:up": "docker compose --env-file .env.docker up --build -d",
+    "docker:down": "docker compose --env-file .env.docker down",
+    "docker:logs": "docker compose --env-file .env.docker logs -f"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.4"
+  }
+}
