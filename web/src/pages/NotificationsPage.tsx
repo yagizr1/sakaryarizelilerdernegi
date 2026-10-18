@@ -2,13 +2,14 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import { useToast } from "@/lib/toast";
+import { buildWhatsAppUrl, DEFAULT_WHATSAPP_TEMPLATE, openWhatsAppChat } from "@/lib/whatsapp";
 import { Badge, Button, Card, Empty, PageHeader, Select, Textarea, statusTone } from "@/components/ui";
-import { HiOutlineMail, HiOutlineDeviceMobile, HiOutlinePaperAirplane, HiOutlineSearch } from "react-icons/hi";
+import { HiOutlineMail, HiOutlinePaperAirplane, HiOutlineSearch } from "react-icons/hi";
+import { FaWhatsapp } from "react-icons/fa";
 
 type Recipient = { id: string; name: string; phone: string; email: string };
 type Status = {
   mail: { enabled: boolean; configured: boolean; mock: boolean; from: string | null };
-  sms: { enabled: boolean; configured: boolean; mock: boolean; provider: string };
   templates: { dues_reminder: string; event_notice: string };
 };
 type Log = {
@@ -28,13 +29,13 @@ type EventItem = { id: string; title: string; date: string; time: string; locati
 export default function NotificationsPage() {
   const toast = useToast();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<"send" | "dues" | "event" | "logs">("send");
+  const [tab, setTab] = useState<"send" | "whatsapp" | "dues" | "event" | "logs">("send");
   const [filter, setFilter] = useState("all");
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [channel, setChannel] = useState<"email" | "sms" | "both">("both");
   const [subject, setSubject] = useState("Dernek bilgilendirmesi");
   const [body, setBody] = useState("Sayın {ad} {soyad}, ...");
+  const [waMessage, setWaMessage] = useState(DEFAULT_WHATSAPP_TEMPLATE);
   const [eventId, setEventId] = useState("");
   const [duesBody, setDuesBody] = useState("");
   const [eventBody, setEventBody] = useState("");
@@ -72,7 +73,7 @@ export default function NotificationsPage() {
         method: "POST",
         body: JSON.stringify({
           memberIds: [...selected],
-          channel,
+          channel: "email",
           type: "custom",
           subject,
           body,
@@ -90,7 +91,7 @@ export default function NotificationsPage() {
       api<SendResult>("/notifications/dues-reminder", {
         method: "POST",
         body: JSON.stringify({
-          channel,
+          channel: "email",
           body: duesBody || status?.templates.dues_reminder,
           memberIds: selected.size ? [...selected] : undefined,
         }),
@@ -108,7 +109,7 @@ export default function NotificationsPage() {
         method: "POST",
         body: JSON.stringify({
           eventId,
-          channel,
+          channel: "email",
           body: eventBody || status?.templates.event_notice,
           memberIds: selected.size ? [...selected] : undefined,
         }),
@@ -122,6 +123,11 @@ export default function NotificationsPage() {
 
   const allSelected = useMemo(
     () => recipients.length > 0 && recipients.every((r) => selected.has(r.id)),
+    [recipients, selected]
+  );
+
+  const selectedRecipients = useMemo(
+    () => recipients.filter((r) => selected.has(r.id)),
     [recipients, selected]
   );
 
@@ -139,9 +145,45 @@ export default function NotificationsPage() {
     });
   }
 
+  function personalizeWa(name: string) {
+    const [ad = "", ...rest] = name.trim().split(/\s+/);
+    const soyad = rest.join(" ");
+    return waMessage
+      .replace(/\{ad\}/gi, ad)
+      .replace(/\{soyad\}/gi, soyad)
+      .replace(/Sayın üyemiz/i, ad ? `Sayın ${ad} ${soyad}`.trim() : "Sayın üyemiz");
+  }
+
+  function openWhatsAppForSelected() {
+    const withPhone = selectedRecipients.filter((r) => buildWhatsAppUrl(r.phone, "x"));
+    if (!withPhone.length) {
+      toast.error("Seçili üyelerde geçerli telefon yok");
+      return;
+    }
+    if (!waMessage.trim()) {
+      toast.error("Mesaj yazın");
+      return;
+    }
+    // Tarayıcı çoklu popup engelini aşmak için sırayla aç; tek üyede doğrudan aç
+    if (withPhone.length === 1) {
+      const r = withPhone[0];
+      if (!openWhatsAppChat(r.phone, personalizeWa(r.name))) {
+        toast.error("WhatsApp açılamadı");
+      }
+      return;
+    }
+    let opened = 0;
+    for (const r of withPhone) {
+      if (openWhatsAppChat(r.phone, personalizeWa(r.name))) opened += 1;
+    }
+    toast.success(
+      `${opened} üye için WhatsApp açıldı. Tarayıcı engellediyse her satırdaki bağlantıyı kullanın.`
+    );
+  }
+
   return (
     <div>
-      <PageHeader title="Bildirimler" desc="E-posta ve SMS ile üye bilgilendirme" />
+      <PageHeader title="Bildirimler" desc="E-posta ve WhatsApp ile üye bilgilendirme" />
 
       <div className="mb-4 grid gap-3 sm:grid-cols-2">
         <Card className="!p-3">
@@ -158,21 +200,18 @@ export default function NotificationsPage() {
         </Card>
         <Card className="!p-3">
           <div className="flex items-center gap-2 text-sm font-semibold">
-            <HiOutlineDeviceMobile className="h-5 w-5 text-brand-600" /> SMS
+            <FaWhatsapp className="h-5 w-5 text-[#25D366]" /> WhatsApp
           </div>
           <p className="mt-1 text-xs text-muted">
-            {status?.sms.mock
-              ? "Mock mod (Netgsm yok — konsola yazılır)"
-              : status?.sms.enabled
-                ? `Aktif · ${status.sms.provider}`
-                : "Kapalı"}
+            Tıkla-Gönder (wa.me) — mesaj cihazınızdaki WhatsApp ile açılır
           </p>
         </Card>
       </div>
 
       <div className="mb-4 flex flex-wrap gap-2">
         {[
-          ["send", "Toplu mesaj"],
+          ["send", "Toplu e-posta"],
+          ["whatsapp", "WhatsApp"],
           ["dues", "Aidat hatırlatma"],
           ["event", "Etkinlik bildirimi"],
           ["logs", "Geçmiş"],
@@ -192,12 +231,7 @@ export default function NotificationsPage() {
 
       {tab !== "logs" && (
         <Card className="mb-4 space-y-3">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Select label="Kanal" value={channel} onChange={(e) => setChannel(e.target.value as typeof channel)}>
-              <option value="both">E-posta + SMS</option>
-              <option value="email">Sadece e-posta</option>
-              <option value="sms">Sadece SMS</option>
-            </Select>
+          <div className="grid gap-3 sm:grid-cols-2">
             <Select label="Üye filtresi" value={filter} onChange={(e) => setFilter(e.target.value)}>
               <option value="all">Aktif üyeler</option>
               <option value="unpaid_dues">Ödenmemiş aidatı olanlar</option>
@@ -277,8 +311,61 @@ export default function NotificationsPage() {
             onClick={() => send.mutate()}
           >
             <HiOutlinePaperAirplane className="h-4 w-4" />
-            {send.isPending ? "Gönderiliyor..." : "Gönder"}
+            {send.isPending ? "Gönderiliyor..." : "E-posta Gönder"}
           </Button>
+        </Card>
+      )}
+
+      {tab === "whatsapp" && (
+        <Card className="space-y-3">
+          <Textarea
+            label="WhatsApp mesajı"
+            value={waMessage}
+            onChange={(e) => setWaMessage(e.target.value)}
+            placeholder={DEFAULT_WHATSAPP_TEMPLATE}
+          />
+          <p className="text-xs text-muted">
+            Mesaj cihazınızdaki WhatsApp ile açılır (Click-to-Chat). Değişkenler: {"{ad} {soyad}"}
+          </p>
+          <Button
+            disabled={selected.size === 0 || !waMessage.trim()}
+            onClick={openWhatsAppForSelected}
+            className="!bg-[#25D366] hover:!bg-[#1da851]"
+          >
+            <FaWhatsapp className="h-4 w-4" />
+            WhatsApp ile Bilgilendir
+          </Button>
+          {selectedRecipients.length > 1 && (
+            <div className="space-y-1 rounded-xl border border-border p-2">
+              <p className="px-1 text-xs font-semibold text-muted">Tek tek aç</p>
+              {selectedRecipients.map((r) => {
+                const url = buildWhatsAppUrl(r.phone, personalizeWa(r.name));
+                return (
+                  <div
+                    key={r.id}
+                    className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50"
+                  >
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-semibold">{r.name}</div>
+                      <div className="truncate text-xs text-muted">{r.phone || "Telefon yok"}</div>
+                    </div>
+                    {url ? (
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="shrink-0 text-sm font-semibold text-[#25D366]"
+                      >
+                        Aç
+                      </a>
+                    ) : (
+                      <span className="text-xs text-muted">—</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </Card>
       )}
 
@@ -291,7 +378,7 @@ export default function NotificationsPage() {
             placeholder={status?.templates.dues_reminder}
           />
           <p className="text-xs text-muted">
-            Değişkenler: {"{ad} {soyad} {ay} {tutar} {son_ödeme} {durum}"} — üye seçmezseniz ödenmemiş aidatı olanlara gider.
+            Değişkenler: {"{ad} {soyad} {ay} {tutar} {son_ödeme} {durum}"} — üye seçmezseniz ödenmemiş aidatı olanlara e-posta gider.
           </p>
           <Button disabled={sendDues.isPending} onClick={() => sendDues.mutate()}>
             <HiOutlinePaperAirplane className="h-4 w-4" />
@@ -317,7 +404,7 @@ export default function NotificationsPage() {
             placeholder={status?.templates.event_notice}
           />
           <p className="text-xs text-muted">
-            Değişkenler: {"{ad} {soyad} {başlık} {tarih} {saat} {konum}"} — üye seçmezseniz tüm aktif üyelere gider.
+            Değişkenler: {"{ad} {soyad} {başlık} {tarih} {saat} {konum}"} — üye seçmezseniz tüm aktif üyelere e-posta gider.
           </p>
           <Button
             disabled={sendEvent.isPending || !eventId}

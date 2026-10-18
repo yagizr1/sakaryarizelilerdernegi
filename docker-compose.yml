@@ -61,11 +61,6 @@ services:
       SMTP_SECURE: ${SMTP_SECURE:-true}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
-      SMS_ENABLED: ${SMS_ENABLED:-false}
-      SMS_PROVIDER: ${SMS_PROVIDER:-mock}
-      NETGSM_USERCODE: ${NETGSM_USERCODE:-}
-      NETGSM_PASSWORD: ${NETGSM_PASSWORD:-}
-      NETGSM_HEADER: ${NETGSM_HEADER:-}
     ports:
       - "${BACKEND_PORT:-4100}:4100"
     volumes:

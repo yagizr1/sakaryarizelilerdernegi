@@ -14,10 +14,4 @@ export const env = {
   SMTP_SECURE: process.env.SMTP_SECURE !== "false",
   SMTP_USER: process.env.SMTP_USER || "",
   SMTP_PASS: process.env.SMTP_PASS || "",
-
-  SMS_ENABLED: process.env.SMS_ENABLED === "true",
-  SMS_PROVIDER: (process.env.SMS_PROVIDER || "mock") as "mock" | "netgsm",
-  NETGSM_USERCODE: process.env.NETGSM_USERCODE || "",
-  NETGSM_PASSWORD: process.env.NETGSM_PASSWORD || "",
-  NETGSM_HEADER: process.env.NETGSM_HEADER || "",
 };

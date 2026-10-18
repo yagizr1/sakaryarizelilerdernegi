@@ -152,7 +152,6 @@ router.patch("/settings", async (req, res) => {
   const parsed = z
     .object({
       notifyEmail: z.boolean().optional(),
-      notifySms: z.boolean().optional(),
     })
     .safeParse(req.body);
   if (!parsed.success) return void res.status(400).json({ message: "Geçersiz veri" });
@@ -160,7 +159,7 @@ router.patch("/settings", async (req, res) => {
     where: { id: memberId(req) },
     data: parsed.data,
   });
-  res.json({ notifyEmail: updated.notifyEmail, notifySms: updated.notifySms });
+  res.json({ notifyEmail: updated.notifyEmail });
 });
 
 export default router;

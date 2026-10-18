@@ -111,7 +111,11 @@ if (!uye) {
             </div>
             <div class="card__body">
               <div class="stack" style="gap:8px;">
-                <button class="btn btn--secondary btn--block" data-quick="sms">${icon("phone")} SMS Gönder</button>
+                <label class="form-label" for="wa-message">WhatsApp mesajı</label>
+                <textarea class="form-textarea" id="wa-message" rows="3">Sayın üyemiz, Sakarya Rizeliler Derneği olarak sizi bilgilendirmek isteriz.</textarea>
+                <button class="btn btn--secondary btn--block" id="btn-whatsapp" style="background:#16a34a;color:#fff;border-color:#16a34a;">
+                  ${icon("message-square")} WhatsApp ile Bilgilendir
+                </button>
                 <button class="btn btn--secondary btn--block" data-quick="email">${icon("mail")} E-posta Gönder</button>
                 <button class="btn btn--outline btn--block" data-quick="print">${icon("printer")} Üyelik Kartı Yazdır</button>
               </div>
@@ -186,6 +190,22 @@ if (!uye) {
 
   document.getElementById("btn-edit")?.addEventListener("click", () => toast("Düzenleme — demo aşamasında"));
   document.getElementById("btn-aidat")?.addEventListener("click", () => toast("Aidat kaydı — demo aşamasında"));
+
+  document.getElementById("btn-whatsapp")?.addEventListener("click", () => {
+    const digits = String(uye.telefon || "").replace(/\D/g, "");
+    let phone = digits;
+    if (digits.startsWith("0") && digits.length >= 11) phone = `90${digits.slice(1)}`;
+    else if (digits.length === 10) phone = `90${digits}`;
+    else if (!digits.startsWith("90") && digits.length >= 10) phone = digits;
+    if (!phone || phone.length < 10) {
+      toast("Geçerli telefon numarası yok");
+      return;
+    }
+    const message = document.getElementById("wa-message")?.value || "";
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  });
+
   document.querySelectorAll("[data-quick]").forEach((btn) => {
     btn.addEventListener("click", () => toast("İşlem demo aşamasında (backend yok)"));
   });

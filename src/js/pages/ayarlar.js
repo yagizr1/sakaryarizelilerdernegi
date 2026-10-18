@@ -141,13 +141,10 @@ mountLayout({
             </div>
             <div class="setting-row">
               <div>
-                <div class="setting-row__label">SMS Bildirimleri</div>
-                <div class="setting-row__desc">Acil duyuru ve hatırlatmalar</div>
+                <div class="setting-row__label">WhatsApp Bilgilendirme</div>
+                <div class="setting-row__desc">Üye detayından Click-to-Chat (wa.me) ile gönderilir</div>
               </div>
-              <label class="toggle">
-                <input type="checkbox" checked />
-                <span class="toggle__slider"></span>
-              </label>
+              <span class="badge badge--success">Aktif</span>
             </div>
             <div class="setting-row">
               <div>

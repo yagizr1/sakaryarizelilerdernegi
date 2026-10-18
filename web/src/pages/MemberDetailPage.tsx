@@ -4,9 +4,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import { initials, money, statusLabel, dutyLabel, effectiveDueStatus, formatDueDate, formatDueMonth } from "@/lib/format";
 import { useToast } from "@/lib/toast";
-import { Badge, Button, Card, Empty, PageHeader, statusTone } from "@/components/ui";
+import { DEFAULT_WHATSAPP_TEMPLATE, openWhatsAppChat } from "@/lib/whatsapp";
+import { Badge, Button, Card, Empty, PageHeader, Textarea, statusTone } from "@/components/ui";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { HiOutlineArrowLeft, HiOutlineTrash } from "react-icons/hi";
+import { FaWhatsapp } from "react-icons/fa";
 
 type MemberDetail = {
   id: string;
@@ -30,6 +32,7 @@ export default function MemberDetailPage() {
   const toast = useToast();
   const qc = useQueryClient();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [waMessage, setWaMessage] = useState(DEFAULT_WHATSAPP_TEMPLATE);
 
   const { data, isLoading } = useQuery({
     queryKey: ["member", id],
@@ -134,6 +137,35 @@ export default function MemberDetailPage() {
             <HiOutlineTrash className="h-4 w-4" /> Sil
           </Button>
         </div>
+      </Card>
+
+      <Card className="mb-4 space-y-3">
+        <h3 className="font-bold">WhatsApp ile Bilgilendir</h3>
+        <Textarea
+          label="Mesaj"
+          value={waMessage}
+          onChange={(e) => setWaMessage(e.target.value)}
+          placeholder={DEFAULT_WHATSAPP_TEMPLATE}
+        />
+        <p className="text-xs text-muted">
+          Mesaj, üyenin telefon numarası ile WhatsApp Click-to-Chat olarak açılır.
+        </p>
+        <Button
+          type="button"
+          disabled={!data.phone?.trim() || !waMessage.trim()}
+          className="!bg-[#25D366] hover:!bg-[#1da851]"
+          onClick={() => {
+            const personalized = waMessage
+              .replace(/\{ad\}/gi, data.firstName)
+              .replace(/\{soyad\}/gi, data.lastName);
+            if (!openWhatsAppChat(data.phone, personalized)) {
+              toast.error("Geçerli telefon numarası yok");
+            }
+          }}
+        >
+          <FaWhatsapp className="h-4 w-4" />
+          WhatsApp ile Gönder
+        </Button>
       </Card>
 
       <Card>

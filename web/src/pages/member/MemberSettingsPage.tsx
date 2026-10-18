@@ -11,17 +11,15 @@ export default function MemberSettingsPage() {
   const qc = useQueryClient();
   const { data: profile } = useQuery({
     queryKey: ["member-profile"],
-    queryFn: () => api<{ notifyEmail: boolean; notifySms: boolean }>("/member/profile"),
+    queryFn: () => api<{ notifyEmail: boolean }>("/member/profile"),
   });
   const [notifyEmail, setNotifyEmail] = useState(true);
-  const [notifySms, setNotifySms] = useState(true);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
 
   useEffect(() => {
     if (profile) {
       setNotifyEmail(profile.notifyEmail);
-      setNotifySms(profile.notifySms);
     }
   }, [profile]);
 
@@ -29,7 +27,7 @@ export default function MemberSettingsPage() {
     mutationFn: () =>
       api("/member/settings", {
         method: "PATCH",
-        body: JSON.stringify({ notifyEmail, notifySms }),
+        body: JSON.stringify({ notifyEmail }),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["member-profile"] });
@@ -68,15 +66,6 @@ export default function MemberSettingsPage() {
             className="h-4 w-4 accent-[#2f7a3e]"
             checked={notifyEmail}
             onChange={(e) => setNotifyEmail(e.target.checked)}
-          />
-        </label>
-        <label className="flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-xl border border-[#eef1f5] bg-[#f8fafb] px-3 text-sm">
-          <span className="font-medium text-[#1a2b4b]">SMS bildirimleri</span>
-          <input
-            type="checkbox"
-            className="h-4 w-4 accent-[#2f7a3e]"
-            checked={notifySms}
-            onChange={(e) => setNotifySms(e.target.checked)}
           />
         </label>
         <Button

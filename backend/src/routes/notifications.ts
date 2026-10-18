@@ -3,7 +3,6 @@ import { z } from "zod";
 import { prisma } from "../prisma";
 import { requireAdmin } from "../middleware/auth";
 import { getMailStatus } from "../mail/mail.service";
-import { getSmsStatus } from "../services/sms.service";
 import {
   defaultTemplates,
   fillTemplate,
@@ -43,7 +42,6 @@ function monthLabel(raw: string) {
 router.get("/status", (_req, res) => {
   res.json({
     mail: getMailStatus(),
-    sms: getSmsStatus(),
     templates: defaultTemplates,
   });
 });
@@ -95,7 +93,7 @@ router.get("/recipients", async (req, res) => {
 
 const sendSchema = z.object({
   memberIds: z.array(z.string()).min(1),
-  channel: z.enum(["email", "sms", "both"]),
+  channel: z.enum(["email"]).default("email"),
   type: z.enum(["dues_reminder", "event_notice", "custom"]).default("custom"),
   subject: z.string().min(1),
   body: z.string().min(1),
@@ -115,7 +113,7 @@ router.post("/dues-reminder", async (req, res) => {
   const schema = z.object({
     dueIds: z.array(z.string()).min(1).optional(),
     memberIds: z.array(z.string()).min(1).optional(),
-    channel: z.enum(["email", "sms", "both"]).default("both"),
+    channel: z.enum(["email"]).default("email"),
     body: z.string().optional(),
   });
   const parsed = schema.safeParse(req.body);
@@ -161,7 +159,7 @@ router.post("/dues-reminder", async (req, res) => {
       subject,
       body,
     });
-    const ok = (!resNotify.email || resNotify.email.ok) && (!resNotify.sms || resNotify.sms.ok);
+    const ok = !resNotify.email || resNotify.email.ok;
     if (ok) sent += 1;
     else failed += 1;
   }
@@ -173,7 +171,7 @@ router.post("/event-notice", async (req, res) => {
   const schema = z.object({
     eventId: z.string().min(1),
     memberIds: z.array(z.string()).optional(),
-    channel: z.enum(["email", "sms", "both"]).default("both"),
+    channel: z.enum(["email"]).default("email"),
     body: z.string().optional(),
   });
   const parsed = schema.safeParse(req.body);
@@ -216,7 +214,7 @@ router.post("/event-notice", async (req, res) => {
       subject,
       body,
     });
-    const ok = (!resNotify.email || resNotify.email.ok) && (!resNotify.sms || resNotify.sms.ok);
+    const ok = !resNotify.email || resNotify.email.ok;
     if (ok) sent += 1;
     else failed += 1;
   }
