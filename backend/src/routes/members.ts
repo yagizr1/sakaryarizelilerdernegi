@@ -12,6 +12,7 @@ import {
   workbookToBuffer,
   type MemberExcelRow,
 } from "../services/memberExcel";
+import { syncAllMembers, syncMemberSafe } from "../services/dernekcepteSync";
 
 const router = Router();
 router.use(requireAdmin);
@@ -263,6 +264,9 @@ router.post("/excel/import", (req, res) => {
       }
     }
 
+    // Excel sonrası arka planda tam senkron (isteği bekletmez)
+    void syncAllMembers();
+
     res.json({
       ok: true,
       created,
@@ -273,6 +277,12 @@ router.post("/excel/import", (req, res) => {
       message: `${created} yeni, ${updated} güncellendi${skipped ? `, ${skipped} atlandı` : ""}.`,
     });
   });
+});
+
+/** Manuel / test: tüm üyeleri DernekCepte'ye gönder */
+router.post("/sync-dernekcepte", async (_req, res) => {
+  const result = await syncAllMembers();
+  res.status(result.ok ? 200 : 503).json(result);
 });
 
 router.get("/:id", async (req, res) => {
@@ -294,6 +304,7 @@ router.post("/", async (req, res) => {
     return;
   }
   const member = await prisma.member.create({ data: parsed.data });
+  syncMemberSafe(member);
   res.status(201).json(member);
 });
 
@@ -305,6 +316,7 @@ router.put("/:id", async (req, res) => {
   }
   try {
     const member = await prisma.member.update({ where: { id: req.params.id }, data: parsed.data });
+    syncMemberSafe(member);
     res.json(member);
   } catch {
     res.status(404).json({ message: "Üye bulunamadı" });
@@ -313,8 +325,10 @@ router.put("/:id", async (req, res) => {
 
 router.delete("/:id", async (req, res) => {
   try {
+    const existing = await prisma.member.findUnique({ where: { id: req.params.id } });
     // İlişkili aidat, katılım, oy kayıtları cascade ile silinir
     await prisma.member.delete({ where: { id: req.params.id } });
+    if (existing) syncMemberSafe(existing, { deactivate: true });
     res.json({ ok: true });
   } catch {
     res.status(404).json({ message: "Üye bulunamadı" });

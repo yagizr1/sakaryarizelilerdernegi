@@ -61,6 +61,10 @@ services:
       SMTP_SECURE: ${SMTP_SECURE:-true}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
+      DERNEKCEPTE_SYNC_ENABLED: ${DERNEKCEPTE_SYNC_ENABLED:-false}
+      DERNEKCEPTE_SYNC_URL: ${DERNEKCEPTE_SYNC_URL:-https://dernekcepte.com/api/internal/sync/members}
+      DERNEKCEPTE_SYNC_SECRET: ${DERNEKCEPTE_SYNC_SECRET:-}
+      DERNEKCEPTE_SYNC_ORG_SLUG: ${DERNEKCEPTE_SYNC_ORG_SLUG:-sakarya-rizeliler-dernegi}
     ports:
       - "${BACKEND_PORT:-4100}:4100"
     volumes:

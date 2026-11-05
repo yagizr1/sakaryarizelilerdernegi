@@ -89,6 +89,10 @@ router.post("/:id/approve", async (req, res) => {
     return created;
   });
 
+  // DernekCepte'ye arka plan senkron (başarısız olsa bile onay bozulmaz)
+  const { syncMemberSafe } = await import("../services/dernekcepteSync");
+  syncMemberSafe(member);
+
   res.json(member);
 });
 

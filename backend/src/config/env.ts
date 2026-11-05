@@ -14,4 +14,13 @@ export const env = {
   SMTP_SECURE: process.env.SMTP_SECURE !== "false",
   SMTP_USER: process.env.SMTP_USER || "",
   SMTP_PASS: process.env.SMTP_PASS || "",
+
+  /** DernekCepte Sakarya org üye senkronu — kapalıyken hiçbir şey yapmaz */
+  DERNEKCEPTE_SYNC_ENABLED: process.env.DERNEKCEPTE_SYNC_ENABLED === "true",
+  DERNEKCEPTE_SYNC_URL:
+    process.env.DERNEKCEPTE_SYNC_URL ||
+    "https://dernekcepte.com/api/internal/sync/members",
+  DERNEKCEPTE_SYNC_SECRET: (process.env.DERNEKCEPTE_SYNC_SECRET || "").trim(),
+  DERNEKCEPTE_SYNC_ORG_SLUG:
+    (process.env.DERNEKCEPTE_SYNC_ORG_SLUG || "sakarya-rizeliler-dernegi").trim(),
 };
